@@ -1,0 +1,294 @@
+:root {
+  --color-primary: #8b572a;
+  --color-primary-hover: #a66a35;
+  --color-bg: #f7f4ee;
+  --color-card: #ffffff;
+  --color-text: #3a2f2a;
+  --color-muted: #7f736a;
+  --color-border: #e6e0d8;
+  --color-success: #67c23a;
+  --color-warning: #f5a623;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.08);
+  --shadow-light: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --max-width: 100vw;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+#app {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--color-bg);
+}
+
+.page-container {
+  padding: 20px 24px;
+  background: var(--color-bg);
+  min-height: 100vh;
+}
+
+.page-inner {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.card-container {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 20px 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-form {
+  margin-bottom: 16px;
+}
+
+.form-actions {
+  text-align: right;
+  margin-top: 20px;
+}
+
+/* 按钮、输入等通用细节 */
+.el-button--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.el-input__inner,
+.el-select .el-input__inner,
+.el-textarea__inner {
+  border-radius: 10px;
+  border-color: var(--color-border);
+  height: 42px;
+}
+
+.el-card {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: none;
+}
+
+/* 仪表盘卡片 */
+.stat-card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+.stat-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 22px;
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+.stat-label {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+/* 表格操作按钮布局 */
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.table-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
+/* 栅格辅助 */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* 响应式断点 */
+@media (max-width: 1199px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 弹窗最大高度和滚动 */
+.el-dialog__body {
+  max-height: calc(80vh - 120px);
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.el-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  margin: 5vh auto !important;
+}
+
+.el-dialog__wrapper {
+  overflow: hidden;
+}
+
+/* 移动端弹窗适配 */
+/* 美化滚动条 - 窄且兼容Safari */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* rem适配 - 移动端使用rem单位 */
+@media (max-width: 767px) {
+  html {
+    font-size: 16px;
+  }
+  
+  .el-dialog {
+    width: 95% !important;
+    margin: 2vh auto !important;
+    max-height: 96vh;
+  }
+  
+  .el-dialog__body {
+    max-height: calc(96vh - 140px);
+    padding: 0.9375rem; /* 15px */
+  }
+  
+  .page-container {
+    padding: 0.75rem; /* 12px */
+  }
+  
+  .card-container {
+    padding: 1rem; /* 16px */
+  }
+  
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 0.75rem; /* 12px */
+  }
+  
+  .el-input__inner,
+  .el-select .el-input__inner,
+  .el-textarea__inner {
+    height: 2.5rem; /* 40px */
+    font-size: 0.875rem; /* 14px */
+  }
+  
+  .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  /* 移动端表格横向滚动 */
+  .el-table {
+    overflow-x: auto;
+    font-size: 0.8125rem; /* 13px */
+  }
+  
+  /* 移动端按钮组 */
+  .table-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .table-actions .el-button {
+    width: 100%;
+    margin: 0.25rem 0; /* 4px */
+    font-size: 0.8125rem; /* 13px */
+    padding: 0.5rem; /* 8px */
+  }
+  
+  /* 移动端字体大小调整 */
+  h1, h2, h3, h4, h5, h6 {
+    font-size: 1.125rem; /* 18px */
+  }
+  
+  h3 {
+    font-size: 1rem; /* 16px */
+  }
+  
+  /* 移动端间距调整 */
+  .el-form-item {
+    margin-bottom: 0.75rem; /* 12px */
+  }
+  
+  .el-button {
+    font-size: 0.875rem; /* 14px */
+    padding: 0.5rem 0.75rem; /* 8px 12px */
+  }
+}
