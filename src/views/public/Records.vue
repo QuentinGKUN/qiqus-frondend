@@ -1,6 +1,6 @@
 <template>
-  <div class="page-container">
-    <div class="card-container" style="max-width: 800px; margin: 0 auto;">
+  <div class="page-container" style="width: 100%;padding: 0;">
+    <div class="card-container" style="width: 100%;max-width: 800px;margin: 0 auto;">
       <div class="table-header" style="text-align: center;">
         <h3>查询上香记录</h3>
       </div>
