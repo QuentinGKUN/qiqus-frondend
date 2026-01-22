@@ -6,7 +6,7 @@ import { shouldSkipTokenCheck } from '@/config/local'
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: 'http://117.72.123.149:20255/api/v1',
+  baseURL: 'http://175.178.119.226:20255/api/v1',
   timeout: 30000
 })
 

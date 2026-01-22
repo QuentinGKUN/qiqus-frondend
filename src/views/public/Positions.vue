@@ -5,9 +5,12 @@
         <h3>查看可用上香位置</h3>
       </div>
 
-      <el-form :inline="true" style="margin-bottom: 20px;" >
+      <el-form :inline="true" style="margin-bottom: 20px;">
         <el-form-item label="位置配置">
-          <el-select v-model="selectedConfigId" placeholder="请选择位置配置" @change="handleConfigChange">
+          <el-select
+            v-model="selectedConfigId"
+            placeholder="请选择位置配置"
+          >
             <el-option
               v-for="config in configs"
               :key="config.id"
@@ -15,6 +18,15 @@
               :value="config.id"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            type="primary"
+            :disabled="!selectedConfigId"
+            @click="handleQuery"
+          >
+            查询
+          </el-button>
         </el-form-item>
       </el-form>
 
@@ -33,7 +45,7 @@
         </div>
       </div>
       <div v-else style="text-align: center; padding: 40px; color: #999;">
-        请先选择位置配置
+        请先选择位置配置后点击「查询」
       </div>
     </div>
   </div>
@@ -66,7 +78,8 @@ export default {
         console.error('加载位置配置失败:', error)
       }
     },
-    async handleConfigChange() {
+    // 点击“查询”按钮后再加载位置数据
+    async handleQuery() {
       if (!this.selectedConfigId) return
       try {
         // 加载可用座位

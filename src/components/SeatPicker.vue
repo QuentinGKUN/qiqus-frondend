@@ -22,6 +22,7 @@
           <div
             v-for="seat in seats"
             :key="seat.id || `seat-${row}-${seat.col || seat.name}`"
+            :data-seat-id="seat.id"
             :class="['seat-item', getSeatClass(seat)]"
             @click="handleSeatClick(seat)"
             @mouseenter="handleSeatHover(seat)"
@@ -29,7 +30,7 @@
           >
             <span class="seat-number">{{ seat.name || `${row}-${seat.col || ''}` }}</span>
             <div v-if="hoveredSeat && hoveredSeat.id === seat.id" class="seat-tooltip">
-              {{ seat.name || `${rowLabelPrefix}${row}${rowLabelSuffix} 第${seat.col || ''}个` }}
+              {{ seat.tooltip || seat.name || `${rowLabelPrefix}${row}${rowLabelSuffix} 第${seat.col || ''}个` }}
             </div>
           </div>
         </div>
@@ -103,6 +104,11 @@ export default {
     showTooltip: {
       type: Boolean,
       default: true
+    },
+    // 是否在选中座位变化时自动滚动到该座位
+    autoScrollToSelected: {
+      type: Boolean,
+      default: true
     }
   },
   data() {
@@ -129,6 +135,16 @@ export default {
         }
       })
       return normalized
+    }
+  },
+  watch: {
+    selectedSeatId: {
+      immediate: true,
+      handler() {
+        if (this.autoScrollToSelected) {
+          this.scrollToSelected()
+        }
+      }
     }
   },
   methods: {
@@ -182,6 +198,23 @@ export default {
     },
     resetZoom() {
       this.zoomLevel = 1
+    },
+    scrollToSelected() {
+      // 在 DOM 更新后滚动到选中座位
+      this.$nextTick(() => {
+        if (!this.selectedSeatId) return
+        const container = this.$el && this.$el.querySelector('.seat-layout-container')
+        if (!container) return
+        const el = container.querySelector(`[data-seat-id="${this.selectedSeatId}"]`)
+        if (el && typeof el.scrollIntoView === 'function') {
+          try {
+            el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
+          } catch (e) {
+            // 兼容不支持 options 的环境
+            el.scrollIntoView()
+          }
+        }
+      })
     }
   }
 }
@@ -322,7 +355,14 @@ export default {
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 12px;
-  white-space: nowrap;
+  white-space: pre-line;
+  min-width: 240px;
+  max-width: 360px;
+  text-align: left;
+  line-height: 1.6;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  writing-mode: horizontal-tb;
   z-index: 1000;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);

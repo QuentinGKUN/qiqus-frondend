@@ -54,16 +54,36 @@
         <el-form-item label="配置名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入配置名称" />
         </el-form-item>
-        <el-form-item label="配置类型" prop="type">
-          <el-radio-group v-model="form.type">
-            <el-radio label="grid">网格布局</el-radio>
-            <el-radio label="custom">自定义布局</el-radio>
-          </el-radio-group>
-        </el-form-item>
         <el-form-item label="布局配置" prop="layout_config">
-          <div style="margin-bottom: 10px;">
-            <el-button size="small" @click="handleAddRow">添加行</el-button>
-            <el-button size="small" type="danger" @click="handleClearRows">清空</el-button>
+          <div class="layout-toolbar">
+            <div class="layout-quick-settings">
+              <span>共有</span>
+              <el-input-number
+                v-model="quickRows"
+                :min="1"
+                :max="100"
+                size="small"
+                :controls="false"
+                class="layout-quick-input"
+              />
+              <span>排，每排</span>
+              <el-input-number
+                v-model="quickCols"
+                :min="1"
+                :max="100"
+                size="small"
+                :controls="false"
+                class="layout-quick-input"
+              />
+              <span>个座位</span>
+              <el-button size="small" type="primary" @click="applyQuickLayout" style="margin-left: 8px;">
+                一键生成
+              </el-button>
+            </div>
+            <div class="layout-row-buttons">
+              <el-button size="small" @click="handleAddRow">添加行</el-button>
+              <el-button size="small" type="danger" @click="handleClearRows">清空</el-button>
+            </div>
           </div>
           <!-- 图形化布局编辑 -->
           <div class="layout-visual">
@@ -236,10 +256,12 @@ export default {
         status: 1
       },
       layoutRows: [],
+      // 自定义布局快捷配置：有多少行、每行多少个
+      quickRows: 3,
+      quickCols: 8,
       viewData: {},
       rules: {
-        name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
-        type: [{ required: true, message: '请选择配置类型', trigger: 'change' }]
+        name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }]
       },
       tableLoading: false
     }
@@ -382,6 +404,18 @@ export default {
         this.layoutRows = []
       }
       this.dialogVisible = true
+    },
+    // 一键根据“多少行，每行多少个”生成布局
+    applyQuickLayout() {
+      if (!this.quickRows || !this.quickCols) {
+        this.$message.warning('请先填写行数和每行座位数')
+        return
+      }
+      const rows = []
+      for (let i = 1; i <= this.quickRows; i++) {
+        rows.push({ row: i, cols: this.quickCols })
+      }
+      this.layoutRows = rows
     },
     handleAddRow() {
       const maxRow = this.layoutRows.length > 0

@@ -207,7 +207,7 @@ export default {
   },
   mounted() {
     this.loadConfigs()
-    this.loadData()
+    // 不自动加载列表，需要选择位置配置后点击查询
   },
   methods: {
     async loadConfigs() {
@@ -308,7 +308,8 @@ export default {
         position_config_id: null,
         status: null
       }
-      this.loadData()
+      this.tableData = []
+      // 重置后不自动查询，需要手动点击查询按钮
     },
     resetForm() {
       this.$refs.form?.resetFields()

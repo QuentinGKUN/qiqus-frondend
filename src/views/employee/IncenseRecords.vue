@@ -106,6 +106,30 @@
           <p style="margin-top: 10px; color: #909399;">加载位置数据中...</p>
         </div>
         <div v-else-if="seatsByRow && Object.keys(seatsByRow).length > 0">
+          <!-- 行列快速定位 -->
+          <div class="seat-jump-bar">
+            <span class="seat-jump-label">快速定位：</span>
+            <el-input-number
+              v-model="jumpRow"
+              :min="1"
+              :controls="false"
+              placeholder="行号"
+              class="seat-jump-input"
+            />
+            <span class="seat-jump-separator">排</span>
+            <el-input-number
+              v-model="jumpCol"
+              :min="1"
+              :controls="false"
+              placeholder="列号"
+              class="seat-jump-input"
+            />
+            <span class="seat-jump-separator">列</span>
+            <el-button type="primary" size="mini" @click="handleJumpSeat">
+              跳转座位
+            </el-button>
+          </div>
+
           <!-- 使用上香位置选择组件 -->
           <SeatPicker
             :seats-by-row="seatsByRow"
@@ -185,7 +209,7 @@
             <el-input v-model="touristForm.name"  placeholder="请输入游客姓名（可选）" />
           </el-form-item>
           <el-form-item label="手机号" prop="phone">
-            <el-input v-model="touristForm.phone" placeholder="请输入手机号（可选）" />
+            <el-input v-model="touristForm.phone" placeholder="请输入手机号" />
           </el-form-item>
           <el-form-item label="身份证号" prop="id_card">
             <el-input v-model="touristForm.id_card" placeholder="请输入身份证号（可选）" />
@@ -308,7 +332,10 @@ export default {
       },
       touristRules: {
         name: [{ required: true, message: '请输入游客姓名', trigger: 'blur' }],
-        phone: [{ validator: validatePhone, trigger: 'blur' }]
+        phone: [
+          { required: true, message: '请输入手机号', trigger: 'blur' },
+          { validator: validatePhone, trigger: 'blur' }
+        ]
       },
       startTimePickerOptions: {
         disabledDate: (time) => {
@@ -325,7 +352,10 @@ export default {
           }
           return time.getTime() < Date.now() - 24 * 60 * 60 * 1000
         }
-      }
+      },
+      // 选座快速定位
+      jumpRow: null,
+      jumpCol: null
     }
   },
   mounted() {
@@ -635,6 +665,29 @@ export default {
     },
     handleDialogClose() {
       this.tempSelectedSeat = null
+    },
+    // 根据“第几排第几个”快速定位座位
+    handleJumpSeat() {
+      if (!this.jumpRow || !this.jumpCol) {
+        this.$message.warning('请先输入行号和列号')
+        return
+      }
+      if (!this.seatsByRow || Object.keys(this.seatsByRow).length === 0) {
+        this.$message.warning('当前没有可选位置')
+        return
+      }
+      const rowKey = String(this.jumpRow)
+      const seatsInRow = this.seatsByRow[rowKey] || []
+      if (!seatsInRow.length) {
+        this.$message.warning(`第${this.jumpRow}排暂无座位`)
+        return
+      }
+      const target = seatsInRow.find(seat => seat.col === this.jumpCol)
+      if (!target) {
+        this.$message.warning(`第${this.jumpRow}排第${this.jumpCol}列暂无座位`)
+        return
+      }
+      this.handleSelectSeat(target)
     },
     // 步骤2下一步
     handleStep2Next() {
