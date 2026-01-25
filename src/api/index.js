@@ -259,6 +259,14 @@ export const adminApi = {
         method: 'get',
         params
       })
+    },
+    exportCSV(params) {
+      return request({
+        url: '/admin/incense-records/export/csv',
+        method: 'get',
+        params,
+        responseType: 'blob'
+      })
     }
   },
   // 统计数据概览
@@ -310,6 +318,23 @@ export const employeeApi = {
     myCount(params) {
       return request({
         url: '/employee/incense-records/my/count',
+        method: 'get',
+        params
+      })
+    },
+    myExpired(params) {
+      return request({
+        url: '/employee/incense-records/my/expired',
+        method: 'get',
+        params
+      })
+    }
+  },
+  // 文件上传
+  upload: {
+    getCosCredential(params) {
+      return request({
+        url: '/employee/upload/cos-credential',
         method: 'get',
         params
       })

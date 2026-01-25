@@ -7,6 +7,49 @@
         <span class="subtitle">员工工作台</span>
       </div>
       <div class="header-right">
+        <!-- 通知栏 -->
+        <el-popover
+          placement="bottom-end"
+          width="400"
+          trigger="click"
+          v-model="notificationVisible"
+          popper-class="expired-records-popover"
+        >
+          <div class="notification-content">
+            <div class="notification-header">
+              <span class="notification-title">到期记录通知</span>
+              <span class="notification-count">共 {{ expiredCount }} 条</span>
+            </div>
+            <div v-if="expiredRecords.length > 0" class="notification-list">
+              <div
+                v-for="record in expiredRecords"
+                :key="record.id"
+                class="notification-item"
+                @click="handleViewRecord(record)"
+              >
+                <div class="record-info">
+                  <div class="record-main">
+                    <span class="tourist-name">{{ record.tourist?.name || '未填写' }}</span>
+                    <span class="incense-type">{{ record.incense_type?.name || '-' }}</span>
+                  </div>
+                  <div class="record-meta">
+                    <span class="position">{{ record.position_path || (record.incense_type?.type === 'banner' ? '锦旗' : '-') }}</span>
+                    <span class="end-time">{{ formatEndTime(record.end_time) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="notification-empty">
+              <p>暂无到期记录</p>
+            </div>
+            <div class="notification-footer" v-if="expiredCount > 5">
+              <el-button type="text" size="small" @click="handleViewMore">查看更多</el-button>
+            </div>
+          </div>
+          <el-badge :value="expiredCount" :hidden="expiredCount === 0" :max="99" slot="reference" class="notification-badge">
+            <el-button type="text" class="notification-icon" icon="el-icon-bell"></el-button>
+          </el-badge>
+        </el-popover>
         <span class="user-info">
           <i class="el-icon-user"></i>
           <span class="user-name">{{ userInfo?.name || userInfo?.username }}</span>
@@ -77,13 +120,46 @@
 
 <script>
 import { mapGetters, mapActions } from 'vuex'
+import { employeeApi } from '@/api'
+import dayjs from 'dayjs'
 
 export default {
   name: 'EmployeeLayout',
+  data() {
+    return {
+      notificationVisible: false,
+      expiredCount: 0,
+      expiredRecords: [],
+      refreshTimer: null
+    }
+  },
   computed: {
     ...mapGetters('user', ['userInfo']),
     activeMenu() {
       return this.$route.path
+    }
+  },
+  mounted() {
+    this.loadExpiredCount()
+    this.loadExpiredRecords()
+    // 每5分钟刷新一次
+    this.refreshTimer = setInterval(() => {
+      this.loadExpiredCount()
+      if (this.notificationVisible) {
+        this.loadExpiredRecords()
+      }
+    }, 5 * 60 * 1000)
+  },
+  beforeDestroy() {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer)
+    }
+  },
+  watch: {
+    notificationVisible(newVal) {
+      if (newVal) {
+        this.loadExpiredRecords()
+      }
     }
   },
   methods: {
@@ -99,6 +175,54 @@ export default {
       }).catch(() => {
         // 用户取消操作，无需处理
       })
+    },
+    // 加载到期记录数量
+    async loadExpiredCount() {
+      try {
+        const res = await employeeApi.incenseRecords.myExpired({
+          page: 1,
+          page_size: 1
+        })
+        if (res.code === 200) {
+          this.expiredCount = res.data?.total || 0
+        }
+      } catch (error) {
+        console.error('加载到期记录数量失败:', error)
+      }
+    },
+    // 加载到期记录列表（前5条）
+    async loadExpiredRecords() {
+      try {
+        const res = await employeeApi.incenseRecords.myExpired({
+          page: 1,
+          page_size: 5
+        })
+        if (res.code === 200) {
+          this.expiredRecords = res.data?.list || []
+        }
+      } catch (error) {
+        console.error('加载到期记录列表失败:', error)
+      }
+    },
+    // 格式化结束时间
+    formatEndTime(endTime) {
+      if (!endTime) return '-'
+      const d = dayjs(endTime)
+      if (!d.isValid()) return '-'
+      return d.format('MM-DD HH:mm')
+    },
+    // 查看单条记录详情
+    handleViewRecord(record) {
+      this.notificationVisible = false
+      this.$router.push({
+        path: '/employee/expired-records',
+        query: { id: record.id }
+      })
+    },
+    // 查看更多
+    handleViewMore() {
+      this.notificationVisible = false
+      this.$router.push('/employee/expired-records')
     }
   }
 }
@@ -292,6 +416,120 @@ export default {
     padding: 5px 10px;
     font-size: 12px;
   }
+}
+
+.notification-badge {
+  margin-right: 8px;
+}
+
+.notification-icon {
+  font-size: 20px;
+  color: var(--color-text);
+  padding: 0;
+}
+
+.notification-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 8px;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.notification-count {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.notification-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: #f5f5f5;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.record-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.record-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tourist-name {
+  font-weight: 500;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.incense-type {
+  font-size: 12px;
+  color: var(--color-primary);
+  background: rgba(139, 87, 42, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.record-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.position {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.end-time {
+  margin-left: 8px;
+  color: #f56c6c;
+}
+
+.notification-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-muted);
+}
+
+.notification-footer {
+  text-align: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 8px;
 }
 </style>
 

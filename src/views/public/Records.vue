@@ -47,16 +47,24 @@
 
       <div v-if="records.length > 0" style="margin-top: 30px;">
         <h4>查询结果：</h4>
-        <el-table :data="records" border style="width: 100%">
-          <el-table-column prop="position_path" label="位置" />
+        <el-table :data="records" border style="width: 100%;">
+          <el-table-column label="位置/图片" width="200">
+            <template slot-scope="scope">
+              <div v-if="scope.row.incense_type === 'banner'">
+                <img v-if="scope.row.image_url" :src="scope.row.image_url" style="max-width: 150px; max-height: 100px; border-radius: 4px;" />
+                <span v-else>-</span>
+              </div>
+              <span v-else>{{ scope.row.position_path || '-' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="incense_type_name" label="香品" />
           <el-table-column prop="start_time" label="开始时间" width="180" />
           <el-table-column prop="end_time" label="结束时间" width="180" />
           <el-table-column prop="remaining_time" label="剩余时间" />
           <el-table-column label="操作" width="120">
             <template slot-scope="scope">
-              <el-button type="text" size="mini" @click="handleView(scope.row)">
-                查看
+              <el-button type="text" size="mini" @click="handleView(scope.row)" :disabled="scope.row.incense_type === 'banner'">
+                {{ scope.row.incense_type === 'banner' ? '查看' : '查看位置' }}
               </el-button>
             </template>
           </el-table-column>
@@ -77,14 +85,21 @@
       <div class="preview-dialog-content">
         <div v-if="currentRecord" style="margin-bottom: 16px;">
           <el-descriptions :column="2" size="small" border>
-            <el-descriptions-item label="位置路径">
+            <el-descriptions-item v-if="currentRecord.incense_type === 'banner'" label="锦旗图片" :span="2">
+              <img v-if="currentRecord.image_url" :src="currentRecord.image_url" style="max-width: 300px; max-height: 200px; border-radius: 4px;" />
+              <span v-else>-</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="currentRecord.incense_type !== 'banner'" label="位置路径">
               {{ currentRecord.position_path || '-' }}
             </el-descriptions-item>
-            <el-descriptions-item label="座位号">
+            <el-descriptions-item v-if="currentRecord.incense_type !== 'banner'" label="座位号">
               {{ currentRecord.position?.name || currentRecord.seat_name || '-' }}
             </el-descriptions-item>
             <el-descriptions-item label="香品">
               {{ currentRecord.incense_type_name || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="香品类型">
+              {{ currentRecord.incense_type === 'banner' ? '锦旗' : '普通香品' }}
             </el-descriptions-item>
             <el-descriptions-item label="开始时间">
               {{ currentRecord.start_time || '-' }}
@@ -97,6 +112,9 @@
 
         <div v-if="previewLoading" style="text-align: center; padding: 40px; color: #999;">
           加载预览中...
+        </div>
+        <div v-else-if="currentRecord && currentRecord.incense_type === 'banner'" style="text-align: center; padding: 40px; color: #999;">
+          锦旗类型无需预览位置
         </div>
         <div v-else-if="previewSeatsByRow && Object.keys(previewSeatsByRow).length > 0" class="preview-seat-container">
           <SeatPicker
@@ -270,7 +288,7 @@ export default {
             this.form.smsCode = ''
             return
           }
-          
+
           this.loading = true
           this.searched = false
           try {

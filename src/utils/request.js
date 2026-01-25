@@ -41,6 +41,12 @@ service.interceptors.response.use(
     const res = response.data
     const userInfo = store.getters['user/userInfo']
     const username = userInfo?.username
+
+    // 文件下载等二进制响应，直接返回 data（避免按 {code,message,data} 解析）
+    const rt = response.config && response.config.responseType
+    if (rt === 'blob' || rt === 'arraybuffer') {
+      return res
+    }
     
     // 如果返回的状态码不是200，说明有错误
     if (res.code !== 200) {

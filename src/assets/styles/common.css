@@ -292,3 +292,12 @@ body {
     padding: 0.5rem 0.75rem; /* 8px 12px */
   }
 }
+
+/* 到期记录通知弹框样式 */
+.expired-records-popover {
+  padding: 0 !important;
+}
+
+.expired-records-popover .el-popover__title {
+  display: none;
+}

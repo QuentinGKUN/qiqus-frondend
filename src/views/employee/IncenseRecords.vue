@@ -6,8 +6,8 @@
       </div>
 
       <el-steps :active="activeStep" finish-status="success" style="margin-bottom: 30px;">
-        <el-step title="选择时间段、香品和区域" />
-        <el-step title="选择具体位置" />
+        <el-step title="选择时间段和香品" />
+        <el-step :title="isBannerType ? '上传锦旗图片' : '选择具体位置'" />
         <el-step title="游客信息" />
         <el-step title="确认信息" />
       </el-steps>
@@ -66,7 +66,7 @@
             </el-select>
           </el-form-item>
           
-          <el-form-item label="区域" prop="position_config_id">
+          <el-form-item label="区域" prop="position_config_id" v-if="!isBannerType">
             <el-select 
               v-model="step1Form.position_config_id" 
               placeholder="请选择区域" 
@@ -85,6 +85,9 @@
               当前岗位未分配区域，请联系管理员
             </div>
           </el-form-item>
+          <div v-if="isBannerType" style="color: #909399; font-size: 12px; margin-left: 120px; margin-top: -20px; margin-bottom: 20px;">
+            锦旗类型无需选择区域
+          </div>
           
           <el-form-item>
             <el-button
@@ -99,59 +102,98 @@
         </el-form>
       </div>
 
-      <!-- 步骤2: 选择具体位置 -->
+      <!-- 步骤2: 选择具体位置或上传锦旗图片 -->
       <div v-if="activeStep === 1" class="step-content">
-        <div v-if="loadingSeats" style="text-align: center; padding: 40px;">
-          <i class="el-icon-loading" style="font-size: 24px;"></i>
-          <p style="margin-top: 10px; color: #909399;">加载位置数据中...</p>
+        <!-- 锦旗类型：上传图片 -->
+        <div v-if="isBannerType">
+          <el-form
+            ref="bannerForm"
+            :model="bannerForm"
+            :rules="bannerRules"
+            label-width="120px"
+            style="max-width: 600px;"
+          >
+            <el-form-item label="锦旗图片" prop="imageUrl">
+              <el-upload
+                class="banner-uploader"
+                action=""
+                accept="image/*"
+                :limit="1"
+                :show-file-list="false"
+                :http-request="uploadBannerToCos"
+                :disabled="uploading"
+              >
+                <img v-if="imageUrl" :src="imageUrl" class="banner-image" />
+                <i v-else class="el-icon-plus banner-uploader-icon"></i>
+                <div v-if="uploading" class="uploading-mask">
+                  <i class="el-icon-loading"></i>
+                  <p>上传中...</p>
+                </div>
+              </el-upload>
+              <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+                支持 jpg、jpeg、png、gif 格式，建议大小不超过 10MB
+              </div>
+            </el-form-item>
+            <el-form-item>
+              <el-button @click="handlePrevStep">上一步</el-button>
+              <el-button type="primary" @click="handleBannerStep2Next" :disabled="!imageUrl || uploading">下一步</el-button>
+            </el-form-item>
+          </el-form>
         </div>
-        <div v-else-if="seatsByRow && Object.keys(seatsByRow).length > 0">
-          <!-- 行列快速定位 -->
-          <div class="seat-jump-bar">
-            <span class="seat-jump-label">快速定位：</span>
-            <el-input-number
-              v-model="jumpRow"
-              :min="1"
-              :controls="false"
-              placeholder="行号"
-              class="seat-jump-input"
-            />
-            <span class="seat-jump-separator">排</span>
-            <el-input-number
-              v-model="jumpCol"
-              :min="1"
-              :controls="false"
-              placeholder="列号"
-              class="seat-jump-input"
-            />
-            <span class="seat-jump-separator">列</span>
-            <el-button type="primary" size="mini" @click="handleJumpSeat">
-              跳转座位
-            </el-button>
+        <!-- 普通香品：选择位置 -->
+        <div v-else>
+          <div v-if="loadingSeats" style="text-align: center; padding: 40px;">
+            <i class="el-icon-loading" style="font-size: 24px;"></i>
+            <p style="margin-top: 10px; color: #909399;">加载位置数据中...</p>
           </div>
+          <div v-else-if="seatsByRow && Object.keys(seatsByRow).length > 0">
+            <!-- 行列快速定位 -->
+            <div class="seat-jump-bar">
+              <span class="seat-jump-label">快速定位：</span>
+              <el-input-number
+                v-model="jumpRow"
+                :min="1"
+                :controls="false"
+                placeholder="行号"
+                class="seat-jump-input"
+              />
+              <span class="seat-jump-separator">排</span>
+              <el-input-number
+                v-model="jumpCol"
+                :min="1"
+                :controls="false"
+                placeholder="列号"
+                class="seat-jump-input"
+              />
+              <span class="seat-jump-separator">列</span>
+              <el-button type="primary" size="mini" @click="handleJumpSeat">
+                跳转座位
+              </el-button>
+            </div>
 
-          <!-- 使用上香位置选择组件 -->
-          <SeatPicker
-            :seats-by-row="seatsByRow"
-            :selected-seat-id="selectedSeat ? selectedSeat.id : null"
-            :disabled-seat-ids="disabledSeatIds"
-            :occupied-seat-ids="occupiedSeatIds"
-            stage-label="供奉台"
-            row-label-prefix="第"
-            row-label-suffix="排"
-            @seat-selected="handleSelectSeat"
-            @seat-disabled-click="handleDisabledSeatClick"
-            @seat-occupied-click="handleOccupiedSeatClick"
-          />
-        </div>
-        <div v-else style="text-align: center; padding: 40px; color: #999;">
-          <p>暂无可用位置</p>
-          <p style="font-size: 12px; margin-top: 10px;">请检查时间段和区域选择</p>
-        </div>
-        
-        <div style="margin-top: 20px;">
-          <el-button @click="handlePrevStep">上一步</el-button>
-          <el-button type="primary" @click="handleStep2Next" :disabled="!selectedSeat">下一步</el-button>
+            <!-- 使用上香位置选择组件 -->
+            <SeatPicker
+              :seats-by-row="seatsByRow"
+              :selected-seat-id="selectedSeat ? selectedSeat.id : null"
+              :disabled-seat-ids="disabledSeatIds"
+              :occupied-seat-ids="occupiedSeatIds"
+              stage-label="供奉台"
+              row-label-prefix="第"
+              row-label-suffix="排"
+              @seat-selected="handleSelectSeat"
+              @seat-disabled-click="handleDisabledSeatClick"
+              @seat-occupied-click="handleOccupiedSeatClick"
+            />
+          </div>
+          <div v-else style="text-align: center; padding: 40px; color: #999;">
+            <p>暂无可用位置</p>
+            <p style="font-size: 12px; margin-top: 10px;">请检查时间段和区域选择</p>
+          </div>
+          
+          <div style="margin-top: 20px;">
+            <el-button @click="handlePrevStep">上一步</el-button>
+            <el-button type="primary" @click="handleStep2Next" :disabled="!selectedSeat">下一步</el-button>
+          </div>
         </div>
       </div>
       
@@ -236,8 +278,12 @@
           <el-descriptions-item label="手机号">{{ touristForm.phone || '-' }}</el-descriptions-item>
           <el-descriptions-item label="身份证号">{{ touristForm.id_card || '-' }}</el-descriptions-item>
           <el-descriptions-item label="祝福语">{{ touristForm.blessing || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="区域">{{ getPositionConfigName(step1Form.position_config_id) }}</el-descriptions-item>
-          <el-descriptions-item label="位置">{{ selectedSeat?.position_path || selectedSeat?.name || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="!isBannerType" label="区域">{{ getPositionConfigName(step1Form.position_config_id) }}</el-descriptions-item>
+          <el-descriptions-item v-if="!isBannerType" label="位置">{{ selectedSeat?.position_path || selectedSeat?.name || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="isBannerType" label="锦旗图片" :span="2">
+            <img v-if="imageUrl" :src="imageUrl" style="max-width: 200px; max-height: 200px; border-radius: 4px;" />
+            <span v-else>-</span>
+          </el-descriptions-item>
           <el-descriptions-item label="香品">{{ getIncenseTypeName(step1Form.incense_type_id) }}</el-descriptions-item>
           <el-descriptions-item label="开始时间">{{ formatDateTimeCN(isoStartTime) || '-' }}</el-descriptions-item>
           <el-descriptions-item label="结束时间">{{ formatDateTimeCN(isoEndTime) || '-' }}</el-descriptions-item>
@@ -252,7 +298,7 @@
 </template>
 
 <script>
-import { employeeApi, adminApi } from '@/api'
+import { employeeApi, adminApi, commonApi } from '@/api'
 import SeatPicker from '@/components/SeatPicker.vue'
 import { isLocalAccount } from '@/config/local'
 import dayjs from 'dayjs'
@@ -322,7 +368,21 @@ export default {
           }
         ],
         incense_type_id: [{ required: true, message: '请选择香品类型', trigger: 'change' }],
-        position_config_id: [{ required: true, message: '请选择区域', trigger: 'change' }]
+        position_config_id: [
+          { 
+            validator: (rule, value, callback) => {
+              // 如果是锦旗类型，不需要选择区域
+              if (this.isBannerType) {
+                callback()
+              } else if (!value) {
+                callback(new Error('请选择区域'))
+              } else {
+                callback()
+              }
+            }, 
+            trigger: 'change' 
+          }
+        ]
       },
       touristForm: {
         name: '',
@@ -355,7 +415,40 @@ export default {
       },
       // 选座快速定位
       jumpRow: null,
-      jumpCol: null
+      jumpCol: null,
+      // 锦旗图片上传
+      imageUrl: '',
+      uploading: false
+      ,
+      bannerForm: {
+        imageUrl: ''
+      },
+      bannerRules: {
+        imageUrl: [{ required: true, message: '请上传锦旗图片', trigger: 'change' }]
+      }
+    }
+  },
+  computed: {
+    // 判断当前选择的香品类型是否为锦旗类型
+    isBannerType() {
+      if (!this.step1Form.incense_type_id) return false
+      const selectedType = this.incenseTypes.find(t => t.id === this.step1Form.incense_type_id)
+      return selectedType && selectedType.type === 'banner'
+    }
+  },
+  watch: {
+    // 当香品类型变化时，清空相关数据
+    'step1Form.incense_type_id'() {
+      if (this.isBannerType) {
+        // 锦旗类型：清空位置相关数据
+        this.selectedSeat = null
+        this.seatsByRow = null
+        this.step1Form.position_config_id = null
+      } else {
+        // 普通香品：清空图片
+        this.imageUrl = ''
+        this.bannerForm.imageUrl = ''
+      }
     }
   },
   mounted() {
@@ -555,18 +648,23 @@ export default {
       this.selectedSeat = null
       this.seatsByRow = null
     },
-        // 步骤1下一步：加载位置数据
+        // 步骤1下一步：根据香品类型决定下一步
     async handleStep1Next() {
       this.$refs.step1Form.validate(async (valid) => {
         if (valid) {
-              this.step1Loading = true
-              try {
-                // 加载位置数据（包括占用情况）
-                await this.loadSeats()
-                this.activeStep = 1
-              } finally {
-                this.step1Loading = false
-              }
+          this.step1Loading = true
+          try {
+            if (this.isBannerType) {
+              // 锦旗类型：直接进入步骤2（上传图片）
+              this.activeStep = 1
+            } else {
+              // 普通香品：加载位置数据（包括占用情况）
+              await this.loadSeats()
+              this.activeStep = 1
+            }
+          } finally {
+            this.step1Loading = false
+          }
         }
       })
     },
@@ -689,10 +787,18 @@ export default {
       }
       this.handleSelectSeat(target)
     },
-    // 步骤2下一步
+    // 步骤2下一步（普通香品）
     handleStep2Next() {
       if (!this.selectedSeat) {
         this.$message.warning('请先选择供奉位置')
+        return
+      }
+      this.activeStep = 2
+    },
+    // 步骤2下一步（锦旗类型）
+    handleBannerStep2Next() {
+      if (!this.imageUrl) {
+        this.$message.warning('请先上传锦旗图片')
         return
       }
       this.activeStep = 2
@@ -726,11 +832,19 @@ export default {
           tourist_name: this.touristForm.name || '',
           tourist_phone: this.touristForm.phone || '',
           tourist_id_card: this.touristForm.id_card || '',
-              blessing: this.touristForm.blessing || '',
-          position_id: this.selectedSeat.id,
+          blessing: this.touristForm.blessing || '',
           incense_type_id: this.step1Form.incense_type_id,
           start_time: this.isoStartTime,
           end_time: this.isoEndTime
+        }
+        
+        // 根据香品类型添加不同的字段
+        if (this.isBannerType) {
+          // 锦旗类型：需要图片URL，不需要位置ID
+          formData.image_url = this.imageUrl
+        } else {
+          // 普通香品：需要位置ID，不需要图片URL
+          formData.position_id = this.selectedSeat.id
         }
         
         const res = await employeeApi.incenseRecords.create(formData)
@@ -742,6 +856,185 @@ export default {
         console.error('提交失败:', error)
       } finally {
         this.submitting = false
+      }
+    },
+    // 压缩图片
+    compressImage(file, maxWidth = 1920, maxHeight = 1920, quality = 0.8) {
+      return new Promise((resolve, reject) => {
+        // 如果文件小于500KB，不压缩
+        if (file.size < 500 * 1024) {
+          resolve(file)
+          return
+        }
+
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const img = new Image()
+          img.onload = () => {
+            // 计算新尺寸
+            let width = img.width
+            let height = img.height
+
+            if (width > maxWidth || height > maxHeight) {
+              if (width > height) {
+                height = (height * maxWidth) / width
+                width = maxWidth
+              } else {
+                width = (width * maxHeight) / height
+                height = maxHeight
+              }
+            }
+
+            // 创建canvas进行压缩
+            const canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0, width, height)
+
+            // 转换为blob
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  // 创建新的File对象，保持原文件名
+                  const compressedFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                  })
+                  resolve(compressedFile)
+                } else {
+                  reject(new Error('图片压缩失败'))
+                }
+              },
+              'image/jpeg',
+              quality
+            )
+          }
+          img.onerror = () => reject(new Error('图片加载失败'))
+          img.src = e.target.result
+        }
+        reader.onerror = () => reject(new Error('文件读取失败'))
+        reader.readAsDataURL(file)
+      })
+    },
+    // 锦旗图片上传：用 http-request 接管 ElementUI 默认上传，严格按 COS 预签名 PUT 上传
+    async uploadBannerToCos(options) {
+      const file = options.file
+      const isImage = file && file.type && file.type.startsWith('image/')
+      const isLt10M = file && file.size / 1024 / 1024 < 10
+
+      if (!isImage) {
+        this.$message.error('只能上传图片文件!')
+        options.onError && options.onError(new Error('invalid file type'))
+        return
+      }
+      if (!isLt10M) {
+        this.$message.error('图片大小不能超过 10MB!')
+        options.onError && options.onError(new Error('file too large'))
+        return
+      }
+
+      this.uploading = true
+      try {
+        // 压缩图片
+        const compressedFile = await this.compressImage(file, 1920, 1920, 0.8)
+        
+        const ext = 'jpg' // 压缩后统一使用jpg格式
+        const credentialRes = await employeeApi.upload.getCosCredential({
+          filename: `${Date.now()}.${ext}`,
+          file_size: compressedFile.size
+        })
+
+        const { upload_url: uploadUrl, access_url: accessUrl, content_type: contentTypeFromApi } = credentialRes.data || {}
+        if (!uploadUrl || !accessUrl) {
+          throw new Error('获取上传凭证失败：缺少 upload_url/access_url')
+        }
+
+        // 预签名 URL 上传：只能携带签名里允许的 header，否则会 403
+        const contentType = contentTypeFromApi || 'application/octet-stream'
+        const urlObj = new URL(uploadUrl)
+        const signedHeaders = (urlObj.searchParams.get('q-header-list') || '')
+          .split(';')
+          .map(item => item.trim().toLowerCase())
+          .filter(Boolean)
+        const shouldSendContentType = signedHeaders.includes('content-type')
+
+        // 使用 XHR，避免 fetch 自动附带 Content-Type 导致签名不匹配
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+          xhr.open('PUT', uploadUrl, true)
+          xhr.withCredentials = false
+          if (shouldSendContentType) {
+            xhr.setRequestHeader('Content-Type', contentType)
+          }
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve()
+            } else {
+              reject(new Error(`上传到COS失败(${xhr.status})${xhr.responseText ? `: ${xhr.responseText}` : ''}`))
+            }
+          }
+          xhr.onerror = () => {
+            // 检查是否是 CORS 错误
+            const errorMsg = xhr.status === 0 ? 'CORS错误：请检查COS桶的CORS配置，需要允许前端域名和PUT方法' : '上传到COS失败（网络错误）'
+            reject(new Error(errorMsg))
+          }
+          // 若未签名 content-type，使用无类型 Blob 以避免浏览器自动加 Content-Type
+          const body = shouldSendContentType ? compressedFile : new Blob([compressedFile], { type: '' })
+          xhr.send(body)
+        })
+
+        this.imageUrl = accessUrl
+        this.bannerForm.imageUrl = accessUrl
+        this.$nextTick(() => {
+          this.$refs.bannerForm && this.$refs.bannerForm.validateField('imageUrl')
+        })
+        this.$message.success('图片上传成功')
+        options.onSuccess && options.onSuccess({ url: accessUrl }, file)
+      } catch (error) {
+        console.error('直接上传到COS失败:', error)
+        
+        // 如果是 CORS 错误，尝试降级到后端代理上传
+        const isCorsError = error.message && (error.message.includes('CORS') || error.message.includes('preflight') || error.message.includes('blocked by CORS'))
+        if (isCorsError) {
+          this.$message.warning('直接上传失败，尝试通过后端代理上传...')
+          try {
+            // 降级方案：通过后端代理上传（使用压缩后的图片）
+            const compressedFile = await this.compressImage(file, 1920, 1920, 0.8)
+            const proxyRes = await commonApi.uploadImage(compressedFile)
+            if (proxyRes.code === 200) {
+              // 兼容不同的响应格式
+              const proxyUrl = proxyRes.data?.url || proxyRes.data?.path || proxyRes.data || proxyRes.url || ''
+              if (proxyUrl) {
+                this.imageUrl = proxyUrl
+                this.bannerForm.imageUrl = proxyUrl
+                this.$nextTick(() => {
+                  this.$refs.bannerForm && this.$refs.bannerForm.validateField('imageUrl')
+                })
+                this.$message.success('图片上传成功（通过后端代理）')
+                options.onSuccess && options.onSuccess({ url: proxyUrl }, file)
+                return
+              }
+            }
+            throw new Error('后端代理上传失败：' + (proxyRes.message || '未知错误'))
+          } catch (proxyError) {
+            console.error('后端代理上传也失败:', proxyError)
+            this.$message.error('上传失败：直接上传CORS错误，后端代理也失败。请联系管理员配置COS桶的CORS规则（允许前端域名和PUT方法）')
+            options.onError && options.onError(proxyError)
+            return
+          }
+        }
+        
+        // 其他错误
+        if (error.message && error.message.includes('403')) {
+          this.$message.error('403错误：签名验证失败，请检查COS配置')
+        } else {
+          this.$message.error(error.message || '图片上传失败，请重试')
+        }
+        this.$message.error(error.message || '图片上传失败，请重试')
+        options.onError && options.onError(error)
+      } finally {
+        this.uploading = false
       }
     }
   }
@@ -855,5 +1148,60 @@ export default {
     text-align: center;
     padding: 0.5rem 0; /* 8px 0 */
   }
+}
+
+/* 锦旗图片上传样式 */
+.banner-uploader {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  width: 178px;
+  height: 178px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fafafa;
+}
+
+.banner-uploader:hover {
+  border-color: #409EFF;
+}
+
+.banner-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.uploading-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.uploading-mask i {
+  font-size: 24px;
+  color: #409EFF;
+}
+
+.uploading-mask p {
+  margin-top: 10px;
+  color: #606266;
+  font-size: 14px;
 }
 </style>

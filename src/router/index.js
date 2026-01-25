@@ -87,6 +87,12 @@ const routes = [
         name: 'EmployeeMyRecords',
         component: () => import('@/views/employee/MyRecords.vue'),
         meta: { title: '我的记录' }
+      },
+      {
+        path: 'expired-records',
+        name: 'EmployeeExpiredRecords',
+        component: () => import('@/views/employee/ExpiredRecords.vue'),
+        meta: { title: '到期记录' }
       }
     ]
   },
