@@ -17,8 +17,8 @@
         >
           <div class="notification-content">
             <div class="notification-header">
-              <span class="notification-title">到期记录通知</span>
-              <span class="notification-count">共 {{ expiredCount }} 条</span>
+              <span class="notification-title">到期提醒</span>
+              <span class="notification-count">30天内共 {{ expiredCount }} 条</span>
             </div>
             <div v-if="expiredRecords.length > 0" class="notification-list">
               <div
@@ -34,15 +34,19 @@
                   </div>
                   <div class="record-meta">
                     <span class="position">{{ record.position_path || (record.incense_type?.type === 'banner' ? '锦旗' : '-') }}</span>
-                    <span class="end-time">{{ formatEndTime(record.end_time) }}</span>
+                    <span class="end-time" :class="{ 'expired': isExpired(record.end_time) }">
+                      <el-tag v-if="isExpired(record.end_time)" type="danger" size="mini" style="margin-right: 4px;">已到期</el-tag>
+                      <el-tag v-else type="warning" size="mini" style="margin-right: 4px;">即将到期</el-tag>
+                      {{ formatEndTime(record.end_time) }}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
             <div v-else class="notification-empty">
-              <p>暂无到期记录</p>
+              <p>30天内无到期记录</p>
             </div>
-            <div class="notification-footer" v-if="expiredCount > 5">
+            <div class="notification-footer" v-if="expiredCount > expiredRecords.length">
               <el-button type="text" size="small" @click="handleViewMore">查看更多</el-button>
             </div>
           </div>
@@ -176,44 +180,103 @@ export default {
         // 用户取消操作，无需处理
       })
     },
-    // 加载到期记录数量
+    // 加载到期记录数量（30天内已到期 + 即将到期）
     async loadExpiredCount() {
       try {
-        const res = await employeeApi.incenseRecords.myExpired({
+        // 获取所有记录，然后过滤出30天内已到期和即将到期的
+        const now = dayjs()
+        const future30Days = now.add(30, 'day')
+        
+        const res = await employeeApi.incenseRecords.myList({
           page: 1,
-          page_size: 1
+          page_size: 1000 // 获取足够多的记录用于过滤
         })
         if (res.code === 200) {
-          this.expiredCount = res.data?.total || 0
+          const allRecords = res.data?.list || []
+          // 过滤出30天内已到期或即将到期的记录
+          const expiredAndUpcomingRecords = allRecords.filter(record => {
+            if (!record.end_time) return false
+            const endTime = dayjs(record.end_time)
+            // 已到期或在30天内即将到期
+            return endTime.isBefore(now) || endTime.isSame(now) || (endTime.isAfter(now) && (endTime.isBefore(future30Days) || endTime.isSame(future30Days)))
+          })
+          this.expiredCount = expiredAndUpcomingRecords.length
         }
       } catch (error) {
         console.error('加载到期记录数量失败:', error)
       }
     },
-    // 加载到期记录列表（前5条）
+    // 加载到期记录列表（前5条，30天内已到期 + 即将到期）
     async loadExpiredRecords() {
       try {
-        const res = await employeeApi.incenseRecords.myExpired({
+        // 获取所有记录，然后过滤出30天内已到期和即将到期的
+        const now = dayjs()
+        const future30Days = now.add(30, 'day')
+        
+        const res = await employeeApi.incenseRecords.myList({
           page: 1,
-          page_size: 5
+          page_size: 1000 // 获取足够多的记录用于过滤
         })
         if (res.code === 200) {
-          this.expiredRecords = res.data?.list || []
+          const allRecords = res.data?.list || []
+          // 过滤出30天内已到期或即将到期的记录，按结束时间升序排列
+          const expiredAndUpcomingRecords = allRecords
+            .filter(record => {
+              if (!record.end_time) return false
+              const endTime = dayjs(record.end_time)
+              // 已到期或在30天内即将到期
+              return endTime.isBefore(now) || endTime.isSame(now) || (endTime.isAfter(now) && (endTime.isBefore(future30Days) || endTime.isSame(future30Days)))
+            })
+            .sort((a, b) => {
+              return dayjs(a.end_time).valueOf() - dayjs(b.end_time).valueOf()
+            })
+            .slice(0, 5) // 只取前5条
+          this.expiredRecords = expiredAndUpcomingRecords
         }
       } catch (error) {
         console.error('加载到期记录列表失败:', error)
       }
     },
-    // 格式化结束时间
+    // 判断是否已到期
+    isExpired(endTime) {
+      if (!endTime) return false
+      return dayjs(endTime).isBefore(dayjs())
+    },
+    // 格式化结束时间（显示剩余时间或已到期）
     formatEndTime(endTime) {
       if (!endTime) return '-'
       const d = dayjs(endTime)
       if (!d.isValid()) return '-'
-      return d.format('MM-DD HH:mm')
+      const now = dayjs()
+      
+      // 如果已到期
+      if (d.isBefore(now)) {
+        const diffDays = now.diff(d, 'day')
+        if (diffDays === 0) {
+          return '今天到期'
+        } else if (diffDays === 1) {
+          return '昨天到期'
+        } else {
+          return `${diffDays}天前到期`
+        }
+      }
+      
+      // 如果未到期
+      const diffDays = d.diff(now, 'day')
+      const diffHours = d.diff(now, 'hour')
+      
+      if (diffDays > 0) {
+        return `${diffDays}天后到期`
+      } else if (diffHours > 0) {
+        return `${diffHours}小时后到期`
+      } else {
+        return '即将到期'
+      }
     },
     // 查看单条记录详情
     handleViewRecord(record) {
       this.notificationVisible = false
+      // 跳转到详情页面，显示详情弹窗
       this.$router.push({
         path: '/employee/expired-records',
         query: { id: record.id }
@@ -368,9 +431,6 @@ export default {
     margin-left: 4px;
   }
   
-  .content {
-    /* padding: 16px; */
-  }
   
   .topbar {
     padding: 0 12px;
@@ -431,6 +491,7 @@ export default {
 .notification-content {
   max-height: 500px;
   overflow-y: auto;
+  padding: 12px;
 }
 
 .notification-header {
@@ -516,6 +577,13 @@ export default {
 
 .end-time {
   margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f56c6c;
+}
+
+.end-time.expired {
   color: #f56c6c;
 }
 
@@ -530,6 +598,11 @@ export default {
   padding: 12px 0;
   border-top: 1px solid var(--color-border);
   margin-top: 8px;
+}
+
+.notification-footer .el-button {
+  width: 100%;
+  color: var(--color-primary);
 }
 </style>
 
